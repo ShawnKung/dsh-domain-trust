@@ -1,0 +1,21 @@
+{
+  "name": "dsh-domain-trust",
+  "version": "0.1.0",
+  "description": "Declare this deployment's served page as host-owned so domain access (reverse proxy + tunnel) gets full settings functionality.",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "cordis.patch.yml"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,4 @@
+# dsh bundle layer: mount the dsh-domain-trust plugin (package root export).
+- insert:
+    - id: dsh-domain-trust
+      name: 'dsh-domain-trust'
