@@ -178,3 +178,57 @@ test('apply registers the plugin settings namespace when settings is available',
   assert.equal(typeof registered.hooks.setSource, 'function')
   assert.equal(typeof registered.hooks.onChange, 'function')
 })
+
+test('auto auth reads the current settings source', () => {
+  let settingsHooks
+  const connection = {
+    authorizeIndex(req, res) {
+      res.writeHead(401)
+      res.end()
+      return false
+    },
+    authenticatedUrl(baseUrl) {
+      return `${baseUrl}/?token=generated`
+    },
+  }
+  const ctx = {
+    webServer: {
+      tapIndex() {
+        return () => {}
+      },
+    },
+    effect(dispose) {
+      return dispose
+    },
+    inject(deps, callback) {
+      if (deps.includes('settings')) {
+        callback({
+          settings: {
+            installSection(owner, ns, schema, entry, hooks) {
+              settingsHooks = hooks
+            },
+          },
+        })
+      }
+      if (deps.includes('connection')) callback({ connection, effect: this.effect })
+    },
+  }
+
+  apply(ctx)
+  settingsHooks.setSource(() => ({
+    autoAuth: true,
+    autoAuthHosts: ['dsh.example.test'],
+  }))
+
+  let status
+  connection.authorizeIndex(req({
+    headers: { host: 'dsh.example.test' },
+  }), {
+    writeHead(nextStatus) {
+      status = nextStatus
+    },
+    end() {},
+  })
+
+  assert.equal(status, 303)
+})
