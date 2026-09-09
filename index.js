@@ -17,15 +17,43 @@
 // token/cookie auth — the same trust level as loopback access.
 //
 // Mechanism copied from dsh-lan-bridge (webServer.tapIndex).
+//
+// Second injection — force "browser online":
+//
+// dsh's connection controller (dsh-client-connection, watchBrowserNetwork)
+// reads navigator.onLine once at startup. When it is false — e.g. macOS
+// reachability misreports offline because a system proxy / Clash breaks the
+// captive-portal check, or the page loads while Wi-Fi is still reconnecting —
+// the controller NEVER attempts a connection: it parks immediately in the
+// "连接异常，点击立即重连" state and waits for a manual click, even though
+// the LAN path to this server is actually fine. This reproduces identically
+// over every access path (domain, nginx, 13080 tunnel), because the gate is
+// client-side and fires before any request is sent.
+//
+// We therefore pin navigator.onLine to true before the app boots and swallow
+// the browser's "offline" event in the capture phase so the controller always
+// attempts to connect on its own.
 
 export const name = 'dsh-domain-trust'
 
 const MARKER = '<script>globalThis.__DSH_TRANSPORT__ = { ownsHost: true };</script>'
 
+const ONLINE_MARKER = `<script>(() => {
+  // __DSH_ONLINE_FORCE__ — see dsh-domain-trust/index.js
+  try { Object.defineProperty(Navigator.prototype, 'onLine', { get: () => true, configurable: true }) } catch (_) {}
+  try { Object.defineProperty(window.navigator, 'onLine', { get: () => true, configurable: true }) } catch (_) {}
+  window.addEventListener('offline', (event) => event.stopImmediatePropagation(), true)
+})();</script>`
+
 function transform(html) {
-  if (typeof html !== 'string' || html.includes('__DSH_TRANSPORT__')) return html
-  if (html.includes('</head>')) return html.replace('</head>', MARKER + '</head>')
-  return MARKER + html
+  if (typeof html !== 'string') return html
+  const additions = []
+  if (!html.includes('__DSH_TRANSPORT__')) additions.push(MARKER)
+  if (!html.includes('__DSH_ONLINE_FORCE__')) additions.push(ONLINE_MARKER)
+  if (additions.length === 0) return html
+  const block = additions.join('')
+  if (html.includes('</head>')) return html.replace('</head>', block + '</head>')
+  return block + html
 }
 
 export function apply(ctx) {
