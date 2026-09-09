@@ -23,7 +23,6 @@ test('auto auth is disabled by default', () => {
 
 test('auto auth allows only configured external hosts', () => {
   const config = internals.withDefaults({
-    autoAuth: true,
     autoAuthHosts: ['dsh.example.test', 'localhost:18080'],
   })
 
@@ -50,7 +49,6 @@ test('auto auth allows only configured external hosts', () => {
 
 test('auto auth ignores token requests and non-root paths', () => {
   const config = internals.withDefaults({
-    autoAuth: true,
     autoAuthHosts: ['dsh.example.test'],
   })
 
@@ -67,7 +65,6 @@ test('auto auth ignores token requests and non-root paths', () => {
 
 test('proxy secret must match when configured', () => {
   const config = internals.withDefaults({
-    autoAuth: true,
     autoAuthHosts: ['dsh.example.test'],
     proxySecretHeader: 'X-DSH-Domain-Trust',
     proxySecretValue: 'secret',
@@ -113,7 +110,6 @@ test('apply redirects unauthenticated index requests through DSH authenticatedUr
     },
   }
   apply(ctx, {
-    autoAuth: true,
     autoAuthHosts: ['dsh.example.test'],
   })
 
@@ -167,7 +163,6 @@ test('apply registers the plugin settings namespace when settings is available',
   }
 
   apply(ctx, {
-    autoAuth: true,
     autoAuthHosts: ['dsh.example.test'],
   })
 
@@ -179,7 +174,7 @@ test('apply registers the plugin settings namespace when settings is available',
   assert.equal(typeof registered.hooks.onChange, 'function')
 })
 
-test('auto auth reads the current settings source', () => {
+test('configured hosts enable auto auth from the current settings source', () => {
   let settingsHooks
   const connection = {
     authorizeIndex(req, res) {
@@ -216,7 +211,7 @@ test('auto auth reads the current settings source', () => {
 
   apply(ctx)
   settingsHooks.setSource(() => ({
-    autoAuth: true,
+    autoAuth: false,
     autoAuthHosts: ['dsh.example.test'],
   }))
 

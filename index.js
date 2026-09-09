@@ -133,7 +133,7 @@ function externalBaseUrl(req) {
 }
 
 function isAutoAuthRequest(req, config) {
-  if (!config.autoAuth) return false
+  if (config.autoAuthHosts.length === 0) return false
   if (req.method !== 'GET' && req.method !== 'HEAD') return false
   const url = new URL(req.url ?? '/', 'http://dsh.invalid')
   if (url.pathname !== '/' || url.searchParams.has('token')) return false
