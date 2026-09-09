@@ -20,7 +20,7 @@
 - 通过域名、反向代理、端口转发或 SSH 隧道访问 DSH Web 时，让插件配置、Models 和 Host-backed settings 正常可用。
 - 在页面启动前注入 `globalThis.__DSH_TRANSPORT__ = { ownsHost: true }`，声明当前 Web 页面属于这个 Host。
 - 强制浏览器在线状态，避免 `navigator.onLine === false` 导致 DSH 前端启动后不主动连接。
-- 可选自动认证桥接：对明确配置的 Host，把第一次未授权的首页访问重定向到 DSH 原生 token URL，由 DSH 自己签发浏览器 cookie。
+- 自动认证桥接：对明确配置的 Host，把第一次未授权的首页访问重定向到 DSH 原生 token URL，由 DSH 自己签发浏览器 cookie。
 - 不修改 `webserver.host`，不会把 DSH 自动暴露到 `0.0.0.0`。
 - 不内置任何域名、IP、反代拓扑或 secret。
 
@@ -66,7 +66,7 @@
 
 - 修改 DSH Web 首页 HTML，在前端启动前插入 Host-owned 标记，让远程访问页面也能使用 Host-backed settings。
 - 固定 `navigator.onLine` 为在线，并拦截启动期的 `offline` 事件，让前端主动尝试连接。
-- 可选启用自动认证桥接：当未授权浏览器访问你明确允许的 Host 首页时，插件调用 DSH 自带的 `connection.authenticatedUrl()` 生成 token URL，并重定向给浏览器，让 DSH 自己完成 token 到 cookie 的交换。
+- 配置可信 Host 后启用自动认证桥接：当未授权浏览器访问你明确允许的 Host 首页时，插件调用 DSH 自带的 `connection.authenticatedUrl()` 生成 token URL，并重定向给浏览器，让 DSH 自己完成 token 到 cookie 的交换。
 - 自动认证桥接只处理根路径 `GET /` 或 `HEAD /`，并且只匹配 `autoAuthHosts` 中显式配置的 Host。
 - 支持使用代理注入的私有 header 作为额外保护，避免非预期入口触发自动认证桥接。
 
@@ -77,7 +77,7 @@
 - 不绕过、不关闭 DSH 原生 token/cookie 认证；插件只是在可选模式下帮浏览器跳转到 DSH 官方认证 URL。
 - 不保护公网暴露的 DSH 实例。如果你的域名、隧道或代理对公网开放，访问控制、防火墙、来源限制和 TLS 需要在外层系统完成。
 - 不替代反向代理的 Origin、Host、TLS、secret header 或访问来源校验。
-- 不自动信任任意域名。`autoAuth` 默认关闭，`autoAuthHosts` 没有默认值，必须由你显式配置。
+- 不自动信任任意域名。`autoAuthHosts` 没有默认值，必须由你显式配置；清空列表即可关闭自动认证桥接。
 - 不修复所有远程访问问题；它只处理 Host-owned 前端判断、浏览器在线状态和可选的首页认证跳转。
 
 ## 问题
@@ -123,19 +123,19 @@ dsh plugin --profile web add dsh-domain-trust@latest
 
 ## 配置
 
-默认配置只修复 Host-owned 前端判断和浏览器在线状态，不启用自动认证桥接。
+默认配置只修复 Host-owned 前端判断和浏览器在线状态。配置至少一个可信 Host 后，自动认证桥接即生效。
 
 安装后也可以在 DSH 前台打开 Settings -> Plugins -> Plugin configuration，展开 `Domain Trust` 卡片配置自动认证桥接、信任 Host 和代理 secret。
 
 ```yaml
 - id: dsh-domain-trust
   config:
-    autoAuth: false
+    autoAuthHosts: []
 ```
 
 ### 自动认证桥接
 
-启用后，插件只会处理满足以下条件的请求：
+配置至少一个可信 Host 后，插件只会处理满足以下条件的请求：
 
 - `GET /` 或 `HEAD /`
 - URL 中没有 `token` 参数
@@ -145,7 +145,6 @@ dsh plugin --profile web add dsh-domain-trust@latest
 ```yaml
 - id: dsh-domain-trust
   config:
-    autoAuth: true
     autoAuthHosts:
       - dsh.example.internal
       - localhost:18080
@@ -159,7 +158,6 @@ dsh plugin --profile web add dsh-domain-trust@latest
 ```yaml
 - id: dsh-domain-trust
   config:
-    autoAuth: true
     autoAuthHosts:
       - dsh.example.internal
     proxySecretHeader: X-DSH-Domain-Trust
@@ -180,7 +178,7 @@ proxy_set_header X-DSH-Domain-Trust "replace-with-a-long-random-secret";
 
 - 插件不禁用 DSH 原生浏览器认证，不自行签发 `dsh-auth-*` cookie。
 - 自动认证桥接只是调用 DSH 官方 `connection.authenticatedUrl()`，然后让 DSH 自己完成 token-cookie 交换。
-- `autoAuth` 默认关闭，且没有默认允许的 Host。
+- `autoAuthHosts` 默认为空；没有显式允许的 Host 时，自动认证桥接保持关闭。
 - 插件不修改 bind host；DSH 仍可保持只监听 `127.0.0.1`，由反向代理、SSH 隧道、Tailscale serve 或其他受控入口转发。
 - 启用 `ownsHost` 后，远程浏览器会获得 Host-backed settings、插件配置、Models 和相关 Host 能力。只应对你信任的入口启用。
 
