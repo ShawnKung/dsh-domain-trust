@@ -125,6 +125,8 @@ dsh plugin --profile web add dsh-domain-trust@latest
 
 默认配置只修复 Host-owned 前端判断和浏览器在线状态，不启用自动认证桥接。
 
+安装后也可以在 DSH 前台打开 Settings -> Plugins -> Plugin configuration，展开 `Domain Trust` 卡片配置自动认证桥接、信任 Host 和代理 secret。
+
 ```yaml
 - id: dsh-domain-trust
   config:

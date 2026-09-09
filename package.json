@@ -1,24 +1,28 @@
 {
   "name": "dsh-domain-trust",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "DSH Web trusted-domain bootstrap for reverse-proxy and tunnel deployments.",
   "type": "module",
   "main": "index.js",
   "exports": {
     ".": "./index.js",
+    "./client": "./client.js",
     "./package.json": "./package.json"
   },
   "files": [
     "index.js",
+    "client.js",
     "cordis.patch.yml",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
-    "check": "node --check index.js",
+    "build": "node scripts/build-client.mjs",
+    "check": "node --check index.js && node --check src/client.js && node --check scripts/build-client.mjs && node --check client.js",
     "test": "node --test",
     "commitlint": "commitlint",
-    "ci": "npm run check && npm test",
+    "ci": "npm run build && npm run check && npm test",
+    "prepare": "npm run build",
     "prepublishOnly": "npm run ci"
   },
   "dsh": {
@@ -26,6 +30,13 @@
     "name": "DSH Domain Trust",
     "bundle": {
       "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-ui-renderer"
+      ],
+      "platform": "web"
     }
   },
   "engines": {
@@ -58,6 +69,7 @@
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.2",
-    "@commitlint/config-conventional": "^21.2.2"
+    "@commitlint/config-conventional": "^21.2.2",
+    "esbuild": "^0.28.2"
   }
 }
