@@ -2,6 +2,12 @@
 
 本项目遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/) 和 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [0.1.3] - 2026-09-09
+
+### 修复
+
+- 正确读取 Host settings 提供的实时配置 getter，避免启用自动认证后仍回退到默认关闭状态。
+
 ## [0.1.2] - 2026-09-09
 
 ### 修复
@@ -30,6 +36,7 @@
 - 不修改 DSH Web bind host，不自动暴露到 `0.0.0.0`。
 - 不自行签发或绕过 DSH 原生 token/cookie 认证。
 
+[0.1.3]: https://github.com/ShawnKung/dsh-domain-trust/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/ShawnKung/dsh-domain-trust/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/ShawnKung/dsh-domain-trust/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/ShawnKung/dsh-domain-trust/releases/tag/v0.1.0

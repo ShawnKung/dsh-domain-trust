@@ -196,7 +196,7 @@ export function apply(ctx, entry = {}) {
   ctx.inject(['settings'], settingsCtx => {
     settingsCtx.settings.installSection(ctx, name, Config, baseConfig, {
       setSource(source) {
-        configSource = () => withDefaults(source)
+        configSource = () => withDefaults(source())
       },
       onChange() {},
     })
