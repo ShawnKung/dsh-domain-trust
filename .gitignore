@@ -1,2 +1,15 @@
 node_modules/
+
 .DS_Store
+*.log
+
+.env
+.env.*
+!.env.example
+
+coverage/
+dist/
+*.tgz
+
+.idea/
+.vscode/

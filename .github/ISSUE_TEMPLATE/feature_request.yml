@@ -1,0 +1,30 @@
+name: 功能建议
+description: 建议新部署场景或兼容性改进
+title: "feat: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 使用场景
+      description: 说明当前遇到的问题，而不只是期望的实现方式。
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 建议方案
+    validations:
+      required: true
+  - type: textarea
+    id: deployment
+    attributes:
+      label: 部署拓扑
+      description: 请使用脱敏信息描述代理、隧道、Host header 和 TLS 终止方式。
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: 参与贡献
+      options:
+        - label: 我愿意提交 Pull Request

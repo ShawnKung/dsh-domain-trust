@@ -1,0 +1,73 @@
+name: 缺陷报告
+description: 报告可复现的问题
+title: "fix: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        请先移除日志、截图和配置中的 Token、Cookie、私有域名、代理 secret 与内网地址。
+  - type: input
+    id: version
+    attributes:
+      label: 插件版本
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: input
+    id: dsh-version
+    attributes:
+      label: DSH 版本
+      placeholder: 0.1.2-rc.1
+    validations:
+      required: true
+  - type: dropdown
+    id: system
+    attributes:
+      label: 操作系统
+      options:
+        - macOS
+        - Linux
+        - Windows
+        - 其他
+    validations:
+      required: true
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: 访问方式
+      options:
+        - 反向代理
+        - SSH 隧道或端口转发
+        - Tailscale 或其他内网网关
+        - 本机 loopback
+        - 其他
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 请提供最小、稳定的复现步骤。
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望行为
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: 隐私确认
+      options:
+        - label: 我已确认内容不包含凭据、真实域名、代理 secret 或内网地址
+          required: true

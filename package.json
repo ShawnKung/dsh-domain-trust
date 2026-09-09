@@ -17,6 +17,7 @@
   "scripts": {
     "check": "node --check index.js",
     "test": "node --test",
+    "commitlint": "commitlint",
     "ci": "npm run check && npm test",
     "prepublishOnly": "npm run ci"
   },
@@ -54,5 +55,9 @@
   },
   "dependencies": {
     "@deepseek-ai/schemastery": "^3.18.2"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.2.2",
+    "@commitlint/config-conventional": "^21.2.2"
   }
 }
