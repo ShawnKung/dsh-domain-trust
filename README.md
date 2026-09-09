@@ -1,72 +1,128 @@
 # dsh-domain-trust
 
-让通过**域名（反向代理 + 隧道）**访问 DeepSeek Harness (dsh) 网页时，插件配置等设置页面拥有和本机 loopback 访问相同的完整功能。
+<div align="center">
+  <strong>让反向代理和隧道后的 DSH Web 保持完整 Host 功能</strong>
+  <br /><br />
+  <a href="https://www.npmjs.com/package/dsh-domain-trust"><img alt="npm version" src="https://img.shields.io/npm/v/dsh-domain-trust" /></a>
+  <a href="https://opensource.org/licenses/MIT"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-yellow.svg" /></a>
+  <br /><br />
+  <a href="https://www.npmjs.com/package/@deepseek-ai/dsh?activeTab=versions"><img alt="DSH 0.1.2-rc.1+" src="https://img.shields.io/badge/DSH-0.1.2--rc.1%2B-4d6bfe" /></a>
+  <img alt="反向代理" src="https://img.shields.io/badge/-反向代理-4d6bfe" />
+  <img alt="隧道访问" src="https://img.shields.io/badge/-隧道访问-4d6bfe" />
+  <img alt="Host settings" src="https://img.shields.io/badge/-Host%20settings-4d6bfe" />
+</div>
+
+## 功能
+
+- 通过域名、反向代理、端口转发或 SSH 隧道访问 DSH Web 时，让插件配置、Models 和 Host-backed settings 正常可用。
+- 在页面启动前注入 `globalThis.__DSH_TRANSPORT__ = { ownsHost: true }`，声明当前 Web 页面属于这个 Host。
+- 强制浏览器在线状态，避免 `navigator.onLine === false` 导致 DSH 前端启动后不主动连接。
+- 可选自动认证桥接：对明确配置的 Host，把第一次未授权的首页访问重定向到 DSH 原生 token URL，由 DSH 自己签发浏览器 cookie。
+- 不修改 `webserver.host`，不会把 DSH 自动暴露到 `0.0.0.0`。
+- 不内置任何域名、IP、反代拓扑或 secret。
 
 ## 问题
 
-dsh 的设置客户端只在页面「被宿主自己拥有」时才接入宿主的 settings 服务：
+DSH 的设置客户端只在页面被判定为 Host-owned 时才接入 Host settings：
 
 ```js
-const persistence = ctx.remote.$host.isLoopback ? "host" : "memory";
+const persistence = ctx.remote.$host.isLoopback ? 'host' : 'memory'
 // isLoopback = transport?.ownsHost === true || isLoopbackHostname(location.hostname)
 ```
 
-- 浏览器地址栏是 `localhost` / `127.x` / `[::1]` → 设置可用
-- 通过域名（如 `http://dsh.mac-svr.cloud`，背后是 nginx 反代 + ssh 隧道）访问 → 地址栏 hostname 非 loopback → 客户端**从不调用** `settings/describe` → **插件配置页空白**
+浏览器地址栏是 `localhost` / `127.x` / `[::1]` 时，设置页可用。通过非 loopback 域名、LAN IP、隧道地址或反向代理访问时，前端可能只使用 memory settings，插件配置和 Models 页面表现为空白或不可用。
 
-插件列表不受影响（走 loader 清单 RPC），所以表现为「列表能看到、配置页啥也没有」。nginx 改请求头无法修复——判断发生在浏览器端。
+DSH 0.1.2 还会要求先打开启动日志中带 `?token=...` 的临时 URL，换取持久浏览器 cookie。反向代理和隧道部署中，每次去日志里复制这个 URL 很麻烦；本插件可以在你显式允许的 Host 上自动完成这一步。
 
-## 原理
+## 安装
 
-dsh 前端启动时会读取 `globalThis.__DSH_TRANSPORT__`，其中 `ownsHost: true` 表示「这个页面就是宿主自己的界面」。本插件仿照 [dsh-lan-bridge](https://github.com/anweat/dsh-lan-bridge) 的 `webServer.tapIndex` 机制，在 index.html 的应用脚本执行前注入：
-
-```html
-<script>globalThis.__DSH_TRANSPORT__ = { ownsHost: true };</script>
-```
-
-之后 `isLoopback` 为真，域名页面获得完整设置功能（含凭据写入）。
-
-## 安全说明
-
-设置页包含凭据/密钥写入能力。启用本插件前请确认域名链路本身可信：
-
-- 域名已有 Origin 防护（nginx `if ($http_origin ...)` / `Sec-Fetch-Site` 检查）
-- 链路经 ssh 反向隧道，未直接暴露 3080
-- dsh 自身的 token 登录 + 30 天 HttpOnly cookie 仍在生效
-
-本插件的信任模型与「本机访问 127.0.0.1」等价：**能连上域名并持有 token 的人即可写设置**。
-
-## 一键安装
+### 从 npm 安装
 
 ```bash
-git clone <repo-url> ~/coding/dsh/plugins/dsh-domain-trust
-~/coding/dsh/plugins/dsh-domain-trust/install.sh
+dsh plugin --profile web add dsh-domain-trust@latest
 ```
 
-`install.sh` 会依次完成（幂等，可重复执行）：
+安装完成后重启 DSH Web 进程，并硬刷新浏览器。
 
-1. 把仓库符号链接到 `~/.dsh/plugins/dsh-domain-trust`（profile 用 `file:../../plugins/...` 相对引用）
-2. 把依赖条目和 bundle 条目写入 `~/.dsh/profiles/web/package.json`（变更前自动备份 `.bak.install-*`）
-3. 强制刷新 pnpm 拷贝（`file:` 依赖有缓存，必须 `rm -rf node_modules/<pkg> && pnpm install --force`）
-4. 用 `dsh --profile web --dump-config` 校验 profile 可正常 compose
-5. 优雅重启 launchd 服务 `ai.deepseek.dsh-web` 并打印新访问 token
+### 从源码安装
 
 ```bash
-./install.sh --no-restart   # 只安装不重启，下次服务重启时生效
-./uninstall.sh              # 从 profile 移除（含备份），默认同样重启服务
+git clone https://github.com/ShawnKung/dsh-domain-trust.git
+cd dsh-domain-trust
+npm install
+npm run ci
+dsh plugin --profile web add link:"$(pwd)"
 ```
 
-## 目录
+## 配置
 
+默认配置只修复 Host-owned 前端判断和浏览器在线状态，不启用自动认证桥接。
+
+```yaml
+- id: dsh-domain-trust
+  config:
+    autoAuth: false
 ```
-index.js          插件本体（tapIndex 注入 ownsHost 标记）
-cordis.patch.yml  bundle 层补丁：向 profile 挂载本插件
-package.json      含 dsh.bundle.patch 声明（bundle 必需）
-install.sh        一键安装
-uninstall.sh      卸载
+
+### 自动认证桥接
+
+启用后，插件只会处理满足以下条件的请求：
+
+- `GET /` 或 `HEAD /`
+- URL 中没有 `token` 参数
+- 外部访问 Host 匹配 `autoAuthHosts`
+- 如配置了 `proxySecretHeader`，请求还必须带有正确 secret
+
+```yaml
+- id: dsh-domain-trust
+  config:
+    autoAuth: true
+    autoAuthHosts:
+      - dsh.example.internal
+      - localhost:18080
+      - 127.0.0.1:18080
 ```
 
-## 版本要求
+`autoAuthHosts` 支持 `host` 或 `host:port`。只写 `host` 时匹配该 hostname 的任意端口；写 `host:port` 时只匹配精确 authority。插件会优先使用 `X-Forwarded-Host` 和 `X-Forwarded-Proto` 生成浏览器可访问的跳转 URL，适合 nginx、Caddy、Traefik 等反向代理。
 
-- dsh ≥ 0.1.2-rc.1（`__DSH_TRANSPORT__` 由前端 boot 读取的机制在该版本验证通过）
-- 仅 web profile 有效（依赖 `webServer.tapIndex`），headless 不受影响
+更稳妥的反向代理配置是要求代理注入一个私有 header：
+
+```yaml
+- id: dsh-domain-trust
+  config:
+    autoAuth: true
+    autoAuthHosts:
+      - dsh.example.internal
+    proxySecretHeader: X-DSH-Domain-Trust
+    proxySecretEnv: DSH_DOMAIN_TRUST_SECRET
+```
+
+对应 nginx 示例：
+
+```nginx
+proxy_set_header X-Forwarded-Host $http_host;
+proxy_set_header X-Forwarded-Proto $scheme;
+proxy_set_header X-DSH-Domain-Trust "replace-with-a-long-random-secret";
+```
+
+如果不想用环境变量，也可以用 `proxySecretValue` 直接配置 secret；不推荐把真实 secret 提交到仓库。
+
+## 安全设计
+
+- 插件不禁用 DSH 原生浏览器认证，不自行签发 `dsh-auth-*` cookie。
+- 自动认证桥接只是调用 DSH 官方 `connection.authenticatedUrl()`，然后让 DSH 自己完成 token-cookie 交换。
+- `autoAuth` 默认关闭，且没有默认允许的 Host。
+- 插件不修改 bind host；DSH 仍可保持只监听 `127.0.0.1`，由反向代理、SSH 隧道、Tailscale serve 或其他受控入口转发。
+- 启用 `ownsHost` 后，远程浏览器会获得 Host-backed settings、插件配置、Models 和相关 Host 能力。只应对你信任的入口启用。
+
+## 开发
+
+```bash
+npm install
+npm run check
+npm run ci
+```
+
+## 许可证
+
+[MIT](./LICENSE) © ShawnKung
