@@ -2,6 +2,13 @@
 
 本项目遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/) 和 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [0.1.2] - 2026-09-09
+
+### 修复
+
+- 注册 `dsh-domain-trust` Host settings namespace，让插件配置页能发现并渲染前台设置卡片。
+- 自动认证桥接改为读取 settings 中的实时配置。
+
 ## [0.1.1] - 2026-09-09
 
 ### 新增
@@ -23,5 +30,6 @@
 - 不修改 DSH Web bind host，不自动暴露到 `0.0.0.0`。
 - 不自行签发或绕过 DSH 原生 token/cookie 认证。
 
+[0.1.2]: https://github.com/ShawnKung/dsh-domain-trust/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/ShawnKung/dsh-domain-trust/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/ShawnKung/dsh-domain-trust/releases/tag/v0.1.0

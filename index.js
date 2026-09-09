@@ -152,9 +152,7 @@ function isAutoAuthRequest(req, config) {
   return header(req.headers, secretHeader) === secretValue
 }
 
-function installAutoAuth(ctx, config) {
-  if (!config.autoAuth) return
-
+function installAutoAuth(ctx, configSource) {
   ctx.inject(['connection'], connectionCtx => {
     const connection = connectionCtx.connection
     if (typeof connection?.authorizeIndex !== 'function' || typeof connection?.authenticatedUrl !== 'function') return
@@ -162,6 +160,7 @@ function installAutoAuth(ctx, config) {
     const original = connection.authorizeIndex.bind(connection)
     connection.authorizeIndex = (req, res) => {
       if (!original(req, { writeHead() {}, end() {} })) {
+        const config = configSource()
         if (!isAutoAuthRequest(req, config)) return original(req, res)
         const baseUrl = externalBaseUrl(req)
         if (baseUrl === undefined) return original(req, res)
@@ -183,7 +182,8 @@ function installAutoAuth(ctx, config) {
 }
 
 export function apply(ctx, entry = {}) {
-  const config = withDefaults(entry)
+  const baseConfig = withDefaults(entry)
+  let configSource = () => baseConfig
 
   try {
     const disposer = ctx.webServer.tapIndex(transform)
@@ -193,7 +193,16 @@ export function apply(ctx, entry = {}) {
     console.error(`[dsh-domain-trust] marker tap failed: ${error}`)
   }
 
-  installAutoAuth(ctx, config)
+  ctx.inject(['settings'], settingsCtx => {
+    settingsCtx.settings.installSection(ctx, name, Config, baseConfig, {
+      setSource(source) {
+        configSource = () => withDefaults(source)
+      },
+      onChange() {},
+    })
+  })
+
+  installAutoAuth(ctx, () => configSource())
 }
 
 export const internals = {

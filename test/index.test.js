@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { apply, internals } from '../index.js'
+import { Config, apply, internals } from '../index.js'
 
 function req({ method = 'GET', url = '/', headers = {} } = {}) {
   return { method, url, headers }
@@ -140,4 +140,41 @@ test('apply redirects unauthenticated index requests through DSH authenticatedUr
   assert.equal(status, 303)
   assert.equal(headers.location, 'http://dsh.example.test/?token=generated')
   assert.equal(ended, true)
+})
+
+test('apply registers the plugin settings namespace when settings is available', () => {
+  let registered
+  const ctx = {
+    webServer: {
+      tapIndex() {
+        return () => {}
+      },
+    },
+    effect(dispose) {
+      return dispose
+    },
+    inject(deps, callback) {
+      if (deps.includes('settings')) {
+        callback({
+          settings: {
+            installSection(owner, ns, schema, entry, hooks) {
+              registered = { owner, ns, schema, entry, hooks }
+            },
+          },
+        })
+      }
+    },
+  }
+
+  apply(ctx, {
+    autoAuth: true,
+    autoAuthHosts: ['dsh.example.test'],
+  })
+
+  assert.equal(registered.owner, ctx)
+  assert.equal(registered.ns, 'dsh-domain-trust')
+  assert.equal(registered.schema, Config)
+  assert.deepEqual(registered.entry.autoAuthHosts, ['dsh.example.test'])
+  assert.equal(typeof registered.hooks.setSource, 'function')
+  assert.equal(typeof registered.hooks.onChange, 'function')
 })
