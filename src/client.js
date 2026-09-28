@@ -1,6 +1,6 @@
 import React, { useEffect, useSyncExternalStore, useState } from 'react'
 
-export const inject = ['slots', 'settingsScope']
+export const inject = ['slots', 'configForms']
 
 const NS = 'dsh-domain-trust'
 const DEFAULTS = Object.freeze({
@@ -199,7 +199,7 @@ function createSettingsCard(scope) {
 
 export function apply(ctx) {
   installStyle()
-  const scope = ctx.settingsScope.bind({ namespace: NS })
+  const scope = ctx.configForms.get(NS)
   const SettingsCard = createSettingsCard(scope)
   ctx.slots.inject('settings.plugin.item', () => ctx.slots.register({
     name: 'settings.plugin.item',

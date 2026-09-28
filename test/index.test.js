@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { Config, apply, internals } from '../index.js'
+import { apply, internals } from '../index.js'
 
 function req({ method = 'GET', url = '/', headers = {} } = {}) {
   return { method, url, headers }
@@ -138,44 +138,56 @@ test('apply redirects unauthenticated index requests through DSH authenticatedUr
   assert.equal(ended, true)
 })
 
-test('apply registers the plugin settings namespace when settings is available', () => {
-  let registered
+test('apply reads namespace snapshot from settings.describe when settings is available', () => {
+  const describeCalls = []
+  const listeners = []
   const ctx = {
     webServer: {
       tapIndex() {
         return () => {}
       },
     },
-    effect(dispose) {
-      return dispose
+    effect(fn) {
+      const dispose = typeof fn === 'function' ? fn() : fn
+      return typeof dispose === 'function' ? dispose : () => {}
     },
     inject(deps, callback) {
       if (deps.includes('settings')) {
-        callback({
+        const settingsCtx = {
           settings: {
-            installSection(owner, ns, schema, entry, hooks) {
-              registered = { owner, ns, schema, entry, hooks }
+            describe(options) {
+              describeCalls.push(options)
+              return [
+                { ns: 'other-plugin', value: {} },
+                { ns: 'dsh-domain-trust', value: { autoAuthHosts: ['dsh.example.test'] } },
+              ]
             },
           },
-        })
+          effect(fn) {
+            const dispose = typeof fn === 'function' ? fn() : fn
+            return typeof dispose === 'function' ? dispose : () => {}
+          },
+          on(event, handler, options) {
+            listeners.push({ event, handler, options })
+            return () => {}
+          },
+        }
+        callback(settingsCtx)
       }
     },
   }
 
-  apply(ctx, {
-    autoAuthHosts: ['dsh.example.test'],
-  })
+  apply(ctx)
 
-  assert.equal(registered.owner, ctx)
-  assert.equal(registered.ns, 'dsh-domain-trust')
-  assert.equal(registered.schema, Config)
-  assert.deepEqual(registered.entry.autoAuthHosts, ['dsh.example.test'])
-  assert.equal(typeof registered.hooks.setSource, 'function')
-  assert.equal(typeof registered.hooks.onChange, 'function')
+  assert.ok(describeCalls.length >= 1)
+  assert.deepEqual(describeCalls[0], { redactSecrets: false })
+  assert.equal(listeners.length, 1)
+  assert.equal(listeners[0].event, 'settings/document-updated')
+  assert.deepEqual(listeners[0].options, { global: true })
 })
 
-test('configured hosts enable auto auth from the current settings source', () => {
-  let settingsHooks
+test('configured hosts enable auto auth from the current settings snapshot', () => {
+  let settingsState = { autoAuthHosts: ['dsh.example.test'] }
   const connection = {
     authorizeIndex(req, res) {
       res.writeHead(401)
@@ -192,28 +204,33 @@ test('configured hosts enable auto auth from the current settings source', () =>
         return () => {}
       },
     },
-    effect(dispose) {
-      return dispose
+    effect(fn) {
+      const dispose = typeof fn === 'function' ? fn() : fn
+      return typeof dispose === 'function' ? dispose : () => {}
     },
     inject(deps, callback) {
       if (deps.includes('settings')) {
-        callback({
+        const settingsCtx = {
           settings: {
-            installSection(owner, ns, schema, entry, hooks) {
-              settingsHooks = hooks
+            describe() {
+              return [{ ns: 'dsh-domain-trust', value: settingsState }]
             },
           },
-        })
+          effect(fn) {
+            const dispose = typeof fn === 'function' ? fn() : fn
+            return typeof dispose === 'function' ? dispose : () => {}
+          },
+          on() {
+            return () => {}
+          },
+        }
+        callback(settingsCtx)
       }
       if (deps.includes('connection')) callback({ connection, effect: this.effect })
     },
   }
 
   apply(ctx)
-  settingsHooks.setSource(() => ({
-    autoAuth: false,
-    autoAuthHosts: ['dsh.example.test'],
-  }))
 
   let status
   connection.authorizeIndex(req({
