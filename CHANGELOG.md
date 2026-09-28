@@ -2,6 +2,15 @@
 
 本项目遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/) 和 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [0.1.5] - 2026-09-28
+
+### 变更
+
+- 迁移到 configForms + volatile schema，兼容 DSH 0.1.7：所有 Config 字段声明为 `.volatile()`，服务端改用 `settings.describe({ redactSecrets: false })` + `settings/document-updated` 事件同步命名空间快照，取代已下线的 `settings.installSection` 流程。
+- 前端从 `settingsScope.bind` 迁移至 `configForms.get(NS)`；client `inject` 从 `['slots', 'settingsScope']` 改为 `['slots', 'configForms']`。
+- 声明兼容 dsh `>=0.1.7-rc.1 <0.2.0`，`dshReleases` 新增 `0.1.7-rc.1: compatible`、`0.1.7-rc.2: compatible`。
+- 将 `@deepseek-ai/schemastery` 从运行依赖迁至 peer + dev 依赖，并升级至 `^3.18.4` 以支持 volatile schema。
+
 ## [0.1.4] - 2026-09-09
 
 ### 修复
@@ -43,6 +52,7 @@
 - 不修改 DSH Web bind host，不自动暴露到 `0.0.0.0`。
 - 不自行签发或绕过 DSH 原生 token/cookie 认证。
 
+[0.1.5]: https://github.com/ShawnKung/dsh-domain-trust/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/ShawnKung/dsh-domain-trust/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/ShawnKung/dsh-domain-trust/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/ShawnKung/dsh-domain-trust/compare/v0.1.1...v0.1.2

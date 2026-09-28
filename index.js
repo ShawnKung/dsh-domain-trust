@@ -40,12 +40,14 @@ export const name = 'dsh-domain-trust'
 export const inject = ['webServer']
 
 export const Config = z.object({
-  autoAuth: z.boolean().default(false),
-  autoAuthHosts: z.array(z.string()).default([]),
-  proxySecretHeader: z.string().default(''),
-  proxySecretValue: z.string().default(''),
-  proxySecretEnv: z.string().default(''),
+  autoAuth: z.boolean().default(false).volatile(),
+  autoAuthHosts: z.array(z.string()).default([]).volatile(),
+  proxySecretHeader: z.string().default('').volatile(),
+  proxySecretValue: z.string().default('').volatile(),
+  proxySecretEnv: z.string().default('').volatile(),
 })
+
+const NS = 'dsh-domain-trust'
 
 const DEFAULT_CONFIG = Object.freeze({
   autoAuth: false,
@@ -194,12 +196,22 @@ export function apply(ctx, entry = {}) {
   }
 
   ctx.inject(['settings'], settingsCtx => {
-    settingsCtx.settings.installSection(ctx, name, Config, baseConfig, {
-      setSource(source) {
-        configSource = () => withDefaults(source())
-      },
-      onChange() {},
-    })
+    const readNamespaceValue = () => {
+      const descriptor = settingsCtx.settings
+        .describe({ redactSecrets: false })
+        .find(entry => entry.ns === NS)
+      return descriptor?.value
+    }
+    const applyLatest = () => {
+      const next = readNamespaceValue()
+      if (next === undefined) return
+      configSource = () => withDefaults(next)
+    }
+    applyLatest()
+    settingsCtx.effect(() => settingsCtx.on('settings/document-updated', ns => {
+      if (ns !== NS) return
+      applyLatest()
+    }, { global: true }), 'dsh-domain-trust: settings sync')
   })
 
   installAutoAuth(ctx, () => configSource())

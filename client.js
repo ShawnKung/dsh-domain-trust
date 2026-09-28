@@ -39,7 +39,7 @@ window.__ModuleLoader__.load({
     });
     module.exports = __toCommonJS(client_exports);
     var import_react = __toESM(require("react"), 1);
-    var inject = ["slots", "settingsScope"];
+    var inject = ["slots", "configForms"];
     var NS = "dsh-domain-trust";
     var DEFAULTS = Object.freeze({
       autoAuthHosts: [],
@@ -221,7 +221,7 @@ window.__ModuleLoader__.load({
     }
     function apply(ctx) {
       installStyle();
-      const scope = ctx.settingsScope.bind({ namespace: NS });
+      const scope = ctx.configForms.get(NS);
       const SettingsCard = createSettingsCard(scope);
       ctx.slots.inject("settings.plugin.item", () => ctx.slots.register({
         name: "settings.plugin.item",
