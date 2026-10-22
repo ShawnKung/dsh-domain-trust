@@ -46,7 +46,7 @@
     <td width="25%">
       <strong>边界清晰</strong>
       <br />
-      不绑定 <code>0.0.0.0</code>，不替代认证，不默认信任任何 Host。
+      不绑定 <code>0.0.0.0</code>，不替代认证，只默认信任本机 3080 端口。
     </td>
   </tr>
 </table>
@@ -77,7 +77,7 @@
 - 不绕过、不关闭 DSH 原生 token/cookie 认证；插件只是在可选模式下帮浏览器跳转到 DSH 官方认证 URL。
 - 不保护公网暴露的 DSH 实例。如果你的域名、隧道或代理对公网开放，访问控制、防火墙、来源限制和 TLS 需要在外层系统完成。
 - 不替代反向代理的 Origin、Host、TLS、secret header 或访问来源校验。
-- 不自动信任任意域名。`autoAuthHosts` 没有默认值，必须由你显式配置；清空列表即可关闭自动认证桥接。
+- 不自动信任任意域名。`autoAuthHosts` 只默认包含 `127.0.0.1:3080` 和 `localhost:3080`；其他 Host 必须显式配置，清空列表即可关闭自动认证桥接。
 - 不修复所有远程访问问题；它只处理 Host-owned 前端判断、浏览器在线状态和可选的首页认证跳转。
 
 ## 问题
@@ -123,14 +123,16 @@ dsh plugin --profile web add dsh-domain-trust@latest
 
 ## 配置
 
-默认配置只修复 Host-owned 前端判断和浏览器在线状态。配置至少一个可信 Host 后，自动认证桥接即生效。
+默认配置还会为本机标准入口 `127.0.0.1:3080` 和 `localhost:3080` 启用自动认证桥接。其他域名、IP 或端口仍需显式加入可信 Host。
 
-安装后也可以在 DSH 前台打开 Settings -> Plugins -> Plugin configuration，展开 `Domain Trust` 卡片配置自动认证桥接、信任 Host 和代理 secret。
+安装后也可以在 DSH 前台打开顶部 Plugins 标签页，进入 `dsh-domain-trust` 的配置页设置自动认证桥接、信任 Host 和代理 secret。
 
 ```yaml
 - id: dsh-domain-trust
   config:
-    autoAuthHosts: []
+    autoAuthHosts:
+      - 127.0.0.1:3080
+      - localhost:3080
 ```
 
 ### 自动认证桥接
@@ -151,7 +153,7 @@ dsh plugin --profile web add dsh-domain-trust@latest
       - 127.0.0.1:18080
 ```
 
-`autoAuthHosts` 支持 `host` 或 `host:port`。只写 `host` 时匹配该 hostname 的任意端口；写 `host:port` 时只匹配精确 authority。插件会优先使用 `X-Forwarded-Host` 和 `X-Forwarded-Proto` 生成浏览器可访问的跳转 URL，适合 nginx、Caddy、Traefik 等反向代理。
+`autoAuthHosts` 支持 `host` 或 `host:port`。只写 `host` 时匹配该 hostname 的任意端口；写 `host:port` 时只匹配精确 authority。默认值只匹配本机 3080 端口；清空列表可关闭自动认证桥接。插件会优先使用 `X-Forwarded-Host` 和 `X-Forwarded-Proto` 生成浏览器可访问的跳转 URL，适合 nginx、Caddy、Traefik 等反向代理。
 
 更稳妥的反向代理配置是要求代理注入一个私有 header：
 
@@ -178,7 +180,7 @@ proxy_set_header X-DSH-Domain-Trust "replace-with-a-long-random-secret";
 
 - 插件不禁用 DSH 原生浏览器认证，不自行签发 `dsh-auth-*` cookie。
 - 自动认证桥接只是调用 DSH 官方 `connection.authenticatedUrl()`，然后让 DSH 自己完成 token-cookie 交换。
-- `autoAuthHosts` 默认为空；没有显式允许的 Host 时，自动认证桥接保持关闭。
+- `autoAuthHosts` 默认只包含 `127.0.0.1:3080` 和 `localhost:3080`；不会默认信任其他域名、IP 或端口。
 - 插件不修改 bind host；DSH 仍可保持只监听 `127.0.0.1`，由反向代理、SSH 隧道、Tailscale serve 或其他受控入口转发。
 - 启用 `ownsHost` 后，远程浏览器会获得 Host-backed settings、插件配置、Models 和相关 Host 能力。只应对你信任的入口启用。
 

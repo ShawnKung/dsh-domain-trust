@@ -41,8 +41,12 @@ window.__ModuleLoader__.load({
     var import_react = __toESM(require("react"), 1);
     var inject = ["slots", "configForms"];
     var NS = "dsh-domain-trust";
+    var ROW_CONFIG_KEY = `${NS}#${NS}`;
     var DEFAULTS = Object.freeze({
-      autoAuthHosts: [],
+      autoAuthHosts: [
+        "127.0.0.1:3080",
+        "localhost:3080"
+      ],
       proxySecretHeader: "",
       proxySecretValue: "",
       proxySecretEnv: ""
@@ -50,7 +54,7 @@ window.__ModuleLoader__.load({
     var STYLE = `
     .dt-settings{list-style:none;border:1px solid var(--dsw-alias-border-l2,rgba(127,127,127,.25));border-radius:12px;background:var(--dsw-alias-bg-layer-3,transparent);color:inherit;transition:border-color .16s,background .16s}.dt-settings:hover{border-color:var(--dsw-alias-label-dimmed,rgba(127,127,127,.45))}.dt-settings[data-open=true]{background:var(--dsw-alias-bg-layer-2,transparent);border-color:var(--dsw-alias-label-dimmed,rgba(127,127,127,.45))}
     .dt-settings-header{appearance:none;box-sizing:border-box;width:100%;border:0;border-radius:12px;background:transparent;color:inherit;display:flex;align-items:center;gap:12px;padding:14px 16px;text-align:left;font:inherit;cursor:pointer}.dt-settings-head{display:flex;flex:1;min-width:0;flex-direction:column;gap:4px}.dt-settings-title{font-size:15px;font-weight:600;line-height:1.4}.dt-settings-description{font-size:13px;line-height:1.5;color:var(--dsw-alias-label-secondary,#9ca3af)}.dt-chevron{width:14px;height:14px;flex:none;fill:none;stroke:currentColor;stroke-width:1.5;transition:transform .16s}.dt-settings[data-open=true] .dt-chevron{transform:rotate(180deg)}.dt-settings-body{border-top:1px solid var(--dsw-alias-border-l2,rgba(127,127,127,.2));margin:0 16px;padding:4px 0 8px}
-    .dt-form{display:grid;gap:14px}.dt-field{display:grid;gap:6px;padding-top:8px}.dt-label{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:550}.dt-field input,.dt-field textarea{box-sizing:border-box;width:100%;min-width:0;border:1px solid var(--dsw-alias-border-l3,rgba(127,127,127,.28));border-radius:6px;background:var(--dsw-alias-bg-layer-1,#fff);color:inherit;padding:0 10px;font:inherit;font-size:12px}.dt-field input{height:34px}.dt-field textarea{min-height:92px;resize:vertical;padding:8px 10px;line-height:1.45}.dt-help{font-size:11px;line-height:1.5;color:var(--dsw-alias-label-tertiary,#9ca3af)}
+    .dt-settings-page{display:grid;gap:14px;color:inherit}.dt-form{display:grid;gap:14px}.dt-field{display:grid;gap:6px;padding-top:8px}.dt-label{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:550}.dt-field input,.dt-field textarea{box-sizing:border-box;width:100%;min-width:0;border:1px solid var(--dsw-alias-border-l3,rgba(127,127,127,.28));border-radius:6px;background:var(--dsw-alias-bg-layer-1,#fff);color:inherit;padding:0 10px;font:inherit;font-size:12px}.dt-field input{height:34px}.dt-field textarea{min-height:92px;resize:vertical;padding:8px 10px;line-height:1.45}.dt-help{font-size:11px;line-height:1.5;color:var(--dsw-alias-label-tertiary,#9ca3af)}
     .dt-buttons{display:flex;justify-content:flex-end;gap:8px}.dt-button{height:34px;border:1px solid var(--dsw-alias-border-l3,rgba(127,127,127,.25));border-radius:6px;padding:0 12px;background:transparent;color:inherit;font:inherit;font-size:12px;cursor:pointer}.dt-button-primary{background:var(--dsw-alias-button-info-fill,#2563eb);border-color:transparent;color:var(--dsw-alias-label-primary-foreground,#fff)}.dt-button:disabled{opacity:.5;cursor:default}.dt-message{font-size:11px}.dt-message[data-error=true]{color:var(--dsw-alias-state-error-primary,#ef4444)}
     `;
     function installStyle() {
@@ -73,11 +77,12 @@ window.__ModuleLoader__.load({
       return value.split(/\r?\n|,/).map((item) => item.trim()).filter(Boolean);
     }
     function createSettingsCard(scope) {
-      return function DshDomainTrustSettings() {
-        const snapshot = (0, import_react.useSyncExternalStore)(
+      return function DshDomainTrustSettings({ view, form: pageForm } = {}) {
+        const scopeSnapshot = (0, import_react.useSyncExternalStore)(
           (listener) => scope.subscribe(listener),
           () => scope.getSnapshot()
         );
+        const snapshot = pageForm?.state ?? scopeSnapshot;
         const values = valuesFrom(snapshot);
         const [open, setOpen] = (0, import_react.useState)(false);
         const [autoAuthHosts, setAutoAuthHosts] = (0, import_react.useState)(hostsText(values.autoAuthHosts));
@@ -88,7 +93,7 @@ window.__ModuleLoader__.load({
         const [message, setMessage] = (0, import_react.useState)("");
         const [failed, setFailed] = (0, import_react.useState)(false);
         const resetDraft = () => {
-          const next = valuesFrom(scope.getSnapshot());
+          const next = valuesFrom(pageForm?.state ?? scope.getSnapshot());
           setAutoAuthHosts(hostsText(next.autoAuthHosts));
           setProxySecretHeader(next.proxySecretHeader ?? "");
           setProxySecretEnv(next.proxySecretEnv ?? "");
@@ -103,12 +108,14 @@ window.__ModuleLoader__.load({
           setFailed(false);
           setMessage("");
           try {
-            await scope.mutate([
+            const mutate = pageForm?.mutate ?? scope.mutate.bind(scope);
+            const accepted = await mutate([
               { op: "set", path: ["autoAuthHosts"], value: parseHosts(autoAuthHosts) },
               { op: "set", path: ["proxySecretHeader"], value: proxySecretHeader.trim() },
               { op: "set", path: ["proxySecretEnv"], value: proxySecretEnv.trim() },
               { op: "set", path: ["proxySecretValue"], value: proxySecretValue }
             ], snapshot.revision);
+            if (accepted === false) throw new Error("\u8BBE\u7F6E\u5DF2\u53D1\u751F\u53D8\u5316\uFF0C\u8BF7\u68C0\u67E5\u540E\u91CD\u8BD5");
             setMessage("\u5DF2\u4FDD\u5B58");
           } catch (error) {
             setFailed(true);
@@ -183,6 +190,20 @@ window.__ModuleLoader__.load({
             )
           )
         );
+        if (view === "summary") {
+          return "\u914D\u7F6E\u53EF\u4FE1 Host\u3001\u81EA\u52A8\u8BA4\u8BC1\u6865\u63A5\u548C\u4EE3\u7406 secret\u3002";
+        }
+        if (view === "page") {
+          return import_react.default.createElement(
+            "section",
+            {
+              className: "dt-settings-page",
+              "data-dsh-plugin": NS,
+              "data-dsh-part": "plugin-config"
+            },
+            form
+          );
+        }
         return import_react.default.createElement(
           "li",
           {
@@ -223,6 +244,10 @@ window.__ModuleLoader__.load({
       installStyle();
       const scope = ctx.configForms.get(NS);
       const SettingsCard = createSettingsCard(scope);
+      ctx.slots.inject("plugins.row.config", () => ctx.slots.register({
+        name: "plugins.row.config",
+        key: ROW_CONFIG_KEY
+      }, SettingsCard));
       ctx.slots.inject("settings.plugin.item", () => ctx.slots.register({
         name: "settings.plugin.item",
         key: NS,

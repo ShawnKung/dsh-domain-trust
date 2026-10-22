@@ -3,8 +3,12 @@ import React, { useEffect, useSyncExternalStore, useState } from 'react'
 export const inject = ['slots', 'configForms']
 
 const NS = 'dsh-domain-trust'
+const ROW_CONFIG_KEY = `${NS}#${NS}`
 const DEFAULTS = Object.freeze({
-  autoAuthHosts: [],
+  autoAuthHosts: [
+    '127.0.0.1:3080',
+    'localhost:3080',
+  ],
   proxySecretHeader: '',
   proxySecretValue: '',
   proxySecretEnv: '',
@@ -13,7 +17,7 @@ const DEFAULTS = Object.freeze({
 const STYLE = `
 .dt-settings{list-style:none;border:1px solid var(--dsw-alias-border-l2,rgba(127,127,127,.25));border-radius:12px;background:var(--dsw-alias-bg-layer-3,transparent);color:inherit;transition:border-color .16s,background .16s}.dt-settings:hover{border-color:var(--dsw-alias-label-dimmed,rgba(127,127,127,.45))}.dt-settings[data-open=true]{background:var(--dsw-alias-bg-layer-2,transparent);border-color:var(--dsw-alias-label-dimmed,rgba(127,127,127,.45))}
 .dt-settings-header{appearance:none;box-sizing:border-box;width:100%;border:0;border-radius:12px;background:transparent;color:inherit;display:flex;align-items:center;gap:12px;padding:14px 16px;text-align:left;font:inherit;cursor:pointer}.dt-settings-head{display:flex;flex:1;min-width:0;flex-direction:column;gap:4px}.dt-settings-title{font-size:15px;font-weight:600;line-height:1.4}.dt-settings-description{font-size:13px;line-height:1.5;color:var(--dsw-alias-label-secondary,#9ca3af)}.dt-chevron{width:14px;height:14px;flex:none;fill:none;stroke:currentColor;stroke-width:1.5;transition:transform .16s}.dt-settings[data-open=true] .dt-chevron{transform:rotate(180deg)}.dt-settings-body{border-top:1px solid var(--dsw-alias-border-l2,rgba(127,127,127,.2));margin:0 16px;padding:4px 0 8px}
-.dt-form{display:grid;gap:14px}.dt-field{display:grid;gap:6px;padding-top:8px}.dt-label{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:550}.dt-field input,.dt-field textarea{box-sizing:border-box;width:100%;min-width:0;border:1px solid var(--dsw-alias-border-l3,rgba(127,127,127,.28));border-radius:6px;background:var(--dsw-alias-bg-layer-1,#fff);color:inherit;padding:0 10px;font:inherit;font-size:12px}.dt-field input{height:34px}.dt-field textarea{min-height:92px;resize:vertical;padding:8px 10px;line-height:1.45}.dt-help{font-size:11px;line-height:1.5;color:var(--dsw-alias-label-tertiary,#9ca3af)}
+.dt-settings-page{display:grid;gap:14px;color:inherit}.dt-form{display:grid;gap:14px}.dt-field{display:grid;gap:6px;padding-top:8px}.dt-label{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:550}.dt-field input,.dt-field textarea{box-sizing:border-box;width:100%;min-width:0;border:1px solid var(--dsw-alias-border-l3,rgba(127,127,127,.28));border-radius:6px;background:var(--dsw-alias-bg-layer-1,#fff);color:inherit;padding:0 10px;font:inherit;font-size:12px}.dt-field input{height:34px}.dt-field textarea{min-height:92px;resize:vertical;padding:8px 10px;line-height:1.45}.dt-help{font-size:11px;line-height:1.5;color:var(--dsw-alias-label-tertiary,#9ca3af)}
 .dt-buttons{display:flex;justify-content:flex-end;gap:8px}.dt-button{height:34px;border:1px solid var(--dsw-alias-border-l3,rgba(127,127,127,.25));border-radius:6px;padding:0 12px;background:transparent;color:inherit;font:inherit;font-size:12px;cursor:pointer}.dt-button-primary{background:var(--dsw-alias-button-info-fill,#2563eb);border-color:transparent;color:var(--dsw-alias-label-primary-foreground,#fff)}.dt-button:disabled{opacity:.5;cursor:default}.dt-message{font-size:11px}.dt-message[data-error=true]{color:var(--dsw-alias-state-error-primary,#ef4444)}
 `
 
@@ -44,11 +48,12 @@ function parseHosts(value) {
 }
 
 function createSettingsCard(scope) {
-  return function DshDomainTrustSettings() {
-    const snapshot = useSyncExternalStore(
+  return function DshDomainTrustSettings({ view, form: pageForm } = {}) {
+    const scopeSnapshot = useSyncExternalStore(
       listener => scope.subscribe(listener),
       () => scope.getSnapshot(),
     )
+    const snapshot = pageForm?.state ?? scopeSnapshot
     const values = valuesFrom(snapshot)
     const [open, setOpen] = useState(false)
     const [autoAuthHosts, setAutoAuthHosts] = useState(hostsText(values.autoAuthHosts))
@@ -60,7 +65,7 @@ function createSettingsCard(scope) {
     const [failed, setFailed] = useState(false)
 
     const resetDraft = () => {
-      const next = valuesFrom(scope.getSnapshot())
+      const next = valuesFrom(pageForm?.state ?? scope.getSnapshot())
       setAutoAuthHosts(hostsText(next.autoAuthHosts))
       setProxySecretHeader(next.proxySecretHeader ?? '')
       setProxySecretEnv(next.proxySecretEnv ?? '')
@@ -77,12 +82,14 @@ function createSettingsCard(scope) {
       setFailed(false)
       setMessage('')
       try {
-        await scope.mutate([
+        const mutate = pageForm?.mutate ?? scope.mutate.bind(scope)
+        const accepted = await mutate([
           { op: 'set', path: ['autoAuthHosts'], value: parseHosts(autoAuthHosts) },
           { op: 'set', path: ['proxySecretHeader'], value: proxySecretHeader.trim() },
           { op: 'set', path: ['proxySecretEnv'], value: proxySecretEnv.trim() },
           { op: 'set', path: ['proxySecretValue'], value: proxySecretValue },
         ], snapshot.revision)
+        if (accepted === false) throw new Error('设置已发生变化，请检查后重试')
         setMessage('已保存')
       } catch (error) {
         setFailed(true)
@@ -160,6 +167,22 @@ function createSettingsCard(scope) {
       ),
     )
 
+    if (view === 'summary') {
+      return '配置可信 Host、自动认证桥接和代理 secret。'
+    }
+
+    if (view === 'page') {
+      return React.createElement(
+        'section',
+        {
+          className: 'dt-settings-page',
+          'data-dsh-plugin': NS,
+          'data-dsh-part': 'plugin-config',
+        },
+        form,
+      )
+    }
+
     return React.createElement(
       'li',
       {
@@ -201,6 +224,10 @@ export function apply(ctx) {
   installStyle()
   const scope = ctx.configForms.get(NS)
   const SettingsCard = createSettingsCard(scope)
+  ctx.slots.inject('plugins.row.config', () => ctx.slots.register({
+    name: 'plugins.row.config',
+    key: ROW_CONFIG_KEY,
+  }, SettingsCard))
   ctx.slots.inject('settings.plugin.item', () => ctx.slots.register({
     name: 'settings.plugin.item',
     key: NS,

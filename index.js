@@ -39,9 +39,14 @@ import z from '@deepseek-ai/schemastery'
 export const name = 'dsh-domain-trust'
 export const inject = ['webServer']
 
+const DEFAULT_AUTO_AUTH_HOSTS = Object.freeze([
+  '127.0.0.1:3080',
+  'localhost:3080',
+])
+
 export const Config = z.object({
   autoAuth: z.boolean().default(false).volatile(),
-  autoAuthHosts: z.array(z.string()).default([]).volatile(),
+  autoAuthHosts: z.array(z.string()).default(DEFAULT_AUTO_AUTH_HOSTS).volatile(),
   proxySecretHeader: z.string().default('').volatile(),
   proxySecretValue: z.string().default('').volatile(),
   proxySecretEnv: z.string().default('').volatile(),
@@ -51,7 +56,7 @@ const NS = 'dsh-domain-trust'
 
 const DEFAULT_CONFIG = Object.freeze({
   autoAuth: false,
-  autoAuthHosts: [],
+  autoAuthHosts: DEFAULT_AUTO_AUTH_HOSTS,
   proxySecretHeader: '',
   proxySecretValue: '',
   proxySecretEnv: '',

@@ -16,9 +16,21 @@ test('index transform injects host ownership and online markers once', () => {
   assert.equal(second.match(/__DSH_ONLINE_FORCE__/g).length, 1)
 })
 
-test('auto auth is disabled by default', () => {
+test('auto auth trusts only the default local DSH endpoints', () => {
   const config = internals.withDefaults()
+  assert.deepEqual(config.autoAuthHosts, [
+    '127.0.0.1:3080',
+    'localhost:3080',
+  ])
+  assert.equal(internals.isAutoAuthRequest(req({ headers: { host: '127.0.0.1:3080' } }), config), true)
+  assert.equal(internals.isAutoAuthRequest(req({ headers: { host: 'localhost:3080' } }), config), true)
+  assert.equal(internals.isAutoAuthRequest(req({ headers: { host: 'localhost:3081' } }), config), false)
   assert.equal(internals.isAutoAuthRequest(req({ headers: { host: 'example.test' } }), config), false)
+})
+
+test('an explicit empty host list disables auto auth', () => {
+  const config = internals.withDefaults({ autoAuthHosts: [] })
+  assert.equal(internals.isAutoAuthRequest(req({ headers: { host: '127.0.0.1:3080' } }), config), false)
 })
 
 test('auto auth allows only configured external hosts', () => {
