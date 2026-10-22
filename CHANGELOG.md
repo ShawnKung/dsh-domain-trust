@@ -2,6 +2,14 @@
 
 本项目遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/) 和 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [未发布]
+
+### 修复
+
+- 适配 DSH 0.2 顶部 Plugins 页面，通过 `plugins.row.config` 为 `dsh-domain-trust` 插件行注册配置入口，同时保留旧版 `settings.plugin.item`。
+- 配置表单支持 Plugins 页面提供的 `form.state` 和 `form.mutate`，并扩展兼容范围至 DSH `<0.3.0`。
+- 未配置 `autoAuthHosts` 时默认信任 `127.0.0.1:3080` 和 `localhost:3080`；显式清空列表仍可关闭自动认证桥接。
+
 ## [0.1.5] - 2026-09-28
 
 ### 变更
