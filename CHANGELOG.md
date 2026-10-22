@@ -2,7 +2,7 @@
 
 本项目遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/) 和 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
-## [未发布]
+## [0.1.6] - 2026-10-22
 
 ### 修复
 
@@ -60,6 +60,7 @@
 - 不修改 DSH Web bind host，不自动暴露到 `0.0.0.0`。
 - 不自行签发或绕过 DSH 原生 token/cookie 认证。
 
+[0.1.6]: https://github.com/ShawnKung/dsh-domain-trust/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/ShawnKung/dsh-domain-trust/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/ShawnKung/dsh-domain-trust/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/ShawnKung/dsh-domain-trust/compare/v0.1.2...v0.1.3
