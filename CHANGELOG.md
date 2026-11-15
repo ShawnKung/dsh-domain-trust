@@ -2,6 +2,12 @@
 
 本项目遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/) 和 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [0.1.7] - 2026-11-15
+
+### 修复
+
+- 兼容 DSH 使用的 Fetch 请求头，使可信 Host 的自动认证桥接正常工作。
+
 ## [0.1.6] - 2026-10-22
 
 ### 修复
