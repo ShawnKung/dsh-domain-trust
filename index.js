@@ -91,6 +91,7 @@ function withDefaults(value = {}) {
 }
 
 function header(headers, name) {
+  if (typeof headers?.get === 'function') return headers.get(name) ?? undefined
   const value = headers[name.toLowerCase()] ?? headers[name]
   if (Array.isArray(value)) return value[0]
   return typeof value === 'string' ? value : undefined

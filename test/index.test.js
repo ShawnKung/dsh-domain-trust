@@ -33,6 +33,19 @@ test('an explicit empty host list disables auto auth', () => {
   assert.equal(internals.isAutoAuthRequest(req({ headers: { host: '127.0.0.1:3080' } }), config), false)
 })
 
+test('Fetch requests support local hosts, forwarded hosts, and proxy secrets', () => {
+  const config = internals.withDefaults({
+    autoAuthHosts: ['127.0.0.1', 'dsh.example.test'],
+    proxySecretHeader: 'X-DSH-Domain-Trust',
+    proxySecretValue: 'secret',
+  })
+  const request = (headers) => new Request('http://dsh.invalid/', { headers })
+  assert.equal(internals.isAutoAuthRequest(request({ host: '127.0.0.1:3080', 'X-DSH-Domain-Trust': 'secret' }), config), true)
+  assert.equal(internals.isAutoAuthRequest(request({ host: '127.0.0.1:3080', 'X-Forwarded-Host': 'dsh.example.test', 'X-DSH-Domain-Trust': 'secret' }), config), true)
+  assert.equal(internals.isAutoAuthRequest(request({ host: '127.0.0.1:3080', 'X-DSH-Domain-Trust': 'wrong' }), config), false)
+  assert.equal(internals.isAutoAuthRequest(request({ host: 'untrusted.example', 'X-DSH-Domain-Trust': 'secret' }), config), false)
+})
+
 test('auto auth allows only configured external hosts', () => {
   const config = internals.withDefaults({
     autoAuthHosts: ['dsh.example.test', 'localhost:18080'],
